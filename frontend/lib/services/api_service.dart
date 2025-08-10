@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String baseUrl = 'https://your-backend-url.com/api'; // TODO: Change this
+  final String baseUrl = 'https://your-backend-url.com/api'; // TODO: Update with actual backend URL
 
   Future<dynamic> get(String endpoint) async {
     final response = await http.get(Uri.parse('$baseUrl$endpoint'));
@@ -48,23 +48,40 @@ class ApiService {
     }
   }
 
-  // ✅ Added missing methods
-  Future<void> login(String email, String password) async {
-    await post('/auth/login', {
+  // 🔹 New methods for your app
+
+  Future<dynamic> login(String email, String password) {
+    return post('/auth/login', {
       'email': email,
       'password': password,
     });
   }
 
-  Future<void> register(String name, String email, String password) async {
-    await post('/auth/register', {
+  Future<dynamic> register(String name, String email, String password) {
+    return post('/auth/register', {
       'name': name,
       'email': email,
       'password': password,
     });
   }
 
-  Future<dynamic> getMlmNetwork() async {
-    return await get('/mlm/network');
+  Future<dynamic> getMlmNetwork() {
+    return get('/mlm/network');
+  }
+
+  Future<dynamic> getWalletBalance() {
+    return get('/wallet/balance');
+  }
+
+  Future<dynamic> deposit(double amount) {
+    return post('/wallet/deposit', {
+      'amount': amount,
+    });
+  }
+
+  Future<dynamic> withdraw(double amount) {
+    return post('/wallet/withdraw', {
+      'amount': amount,
+    });
   }
 }

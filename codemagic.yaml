@@ -11,6 +11,11 @@ workflows:
         script: |
           cd frontend
           flutter pub get
+      - name: Recreate android & ios folders
+        script: |
+          cd frontend
+          rm -rf android ios
+          flutter create -t app .
       - name: Run tests
         script: |
           cd frontend

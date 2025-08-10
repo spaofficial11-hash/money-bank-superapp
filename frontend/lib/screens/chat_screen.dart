@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:money_bank/services/firebase_service.dart';
-import 'package:money_bank/widgets/chat_bubble.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../services/firebase_service.dart';
+import '../widgets/chat_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
-  final String chatTitle;
+  final String otherUserName;
 
   const ChatScreen({
     Key? key,
     required this.chatId,
-    required this.chatTitle,
+    required this.otherUserName,
   }) : super(key: key);
 
   @override
@@ -21,19 +22,20 @@ class _ChatScreenState extends State<ChatScreen> {
   final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController _messageController = TextEditingController();
 
-  Future<void> _sendMessage() async {
-    String text = _messageController.text.trim();
+  void _sendMessage() async {
+    final text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    await _firebaseService.sendMessage(
-      widget.chatId,
-      {
-        'text': text,
-        'senderId': _firebaseService.currentUser?.uid,
-        'timestamp': FieldValue.serverTimestamp(),
-      },
-    );
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
+    final messageData = {
+      'text': text,
+      'senderId': user.uid,
+      'timestamp': FieldValue.serverTimestamp(),
+    };
+
+    await _firebaseService.sendChatMessage(widget.chatId, messageData);
     _messageController.clear();
   }
 
@@ -41,7 +43,7 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.chatTitle),
+        title: Text(widget.otherUserName),
       ),
       body: Column(
         children: [
@@ -53,7 +55,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text('No messages yet.'));
+                  return const Center(child: Text("No messages yet"));
                 }
 
                 final messages = snapshot.data!.docs;
@@ -62,11 +64,14 @@ class _ChatScreenState extends State<ChatScreen> {
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index].data();
+                    final message =
+                        messages[messages.length - 1 - index].data();
+                    final isMe = message['senderId'] ==
+                        FirebaseAuth.instance.currentUser?.uid;
+
                     return ChatBubble(
-                      message: message['text'] ?? '',
-                      isMe: message['senderId'] ==
-                          _firebaseService.currentUser?.uid,
+                      text: message['text'] ?? '',
+                      isMe: isMe,
                       timestamp: (message['timestamp'] is Timestamp)
                           ? (message['timestamp'] as Timestamp).toDate()
                           : null,
@@ -76,27 +81,25 @@ class _ChatScreenState extends State<ChatScreen> {
               },
             ),
           ),
-          _buildMessageInput(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageInput() {
-    return SafeArea(
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _messageController,
-              decoration: const InputDecoration(
-                hintText: 'Type a message...',
-              ),
+          SafeArea(
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    decoration: const InputDecoration(
+                      hintText: 'Type a message...',
+                      contentPadding: EdgeInsets.symmetric(
+                          vertical: 10, horizontal: 16),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.send),
+                  onPressed: _sendMessage,
+                ),
+              ],
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.send),
-            onPressed: _sendMessage,
           ),
         ],
       ),

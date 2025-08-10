@@ -1,61 +1,53 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../services/firebase_service.dart';
 import '../widgets/chat_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
-  final String chatId;
-  final String otherUserName;
+  final String chatId; // Pass this from previous screen
 
-  const ChatScreen({
-    Key? key,
-    required this.chatId,
-    required this.otherUserName,
-  }) : super(key: key);
+  const ChatScreen({Key? key, required this.chatId}) : super(key: key);
 
   @override
   State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final FirebaseService _firebaseService = FirebaseService();
-  final TextEditingController _messageController = TextEditingController();
+  final TextEditingController _controller = TextEditingController();
 
   void _sendMessage() async {
-    final text = _messageController.text.trim();
+    final text = _controller.text.trim();
     if (text.isEmpty) return;
 
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-
-    final messageData = {
-      'text': text,
-      'senderId': user.uid,
-      'timestamp': FieldValue.serverTimestamp(),
-    };
-
-    await _firebaseService.sendChatMessage(widget.chatId, messageData);
-    _messageController.clear();
+    await context.read<FirebaseService>().sendMessage(widget.chatId, text);
+    _controller.clear();
   }
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = context.read<FirebaseService>().currentUser;
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.otherUserName),
+        title: const Text('Chat'),
+        backgroundColor: Colors.blueAccent,
       ),
       body: Column(
         children: [
           Expanded(
             child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-              stream: _firebaseService.getChatMessages(widget.chatId),
+              stream: context
+                  .read<FirebaseService>()
+                  .getChatMessages(widget.chatId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
+
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("No messages yet"));
+                  return const Center(child: Text('No messages yet.'));
                 }
 
                 final messages = snapshot.data!.docs;
@@ -64,17 +56,16 @@ class _ChatScreenState extends State<ChatScreen> {
                   reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message =
-                        messages[messages.length - 1 - index].data();
-                    final isMe = message['senderId'] ==
-                        FirebaseAuth.instance.currentUser?.uid;
+                    final msg = messages[index].data();
+                    final senderId = msg['senderId'];
+                    final text = msg['text'] ?? '';
+                    final timestamp = (msg['timestamp'] as Timestamp?)?.toDate();
+                    final isMe = senderId == currentUser?.uid;
 
                     return ChatBubble(
-                      text: message['text'] ?? '',
+                      text: text,
                       isMe: isMe,
-                      timestamp: (message['timestamp'] is Timestamp)
-                          ? (message['timestamp'] as Timestamp).toDate()
-                          : null,
+                      timestamp: timestamp,
                     );
                   },
                 );
@@ -82,23 +73,29 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           SafeArea(
-            child: Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: const InputDecoration(
-                      hintText: 'Type a message...',
-                      contentPadding: EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _controller,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        contentPadding:
+                            const EdgeInsets.symmetric(horizontal: 12),
+                      ),
                     ),
                   ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.send),
-                  onPressed: _sendMessage,
-                ),
-              ],
+                  IconButton(
+                    icon: const Icon(Icons.send, color: Colors.blueAccent),
+                    onPressed: _sendMessage,
+                  ),
+                ],
+              ),
             ),
           ),
         ],

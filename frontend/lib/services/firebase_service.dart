@@ -1,4 +1,3 @@
-// lib/services/firebase_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -34,20 +33,17 @@ class FirebaseService {
         .collection('chats')
         .doc(chatId)
         .collection('messages')
-        .orderBy('timestamp', descending: false)
+        .orderBy('timestamp', descending: true)
         .snapshots();
   }
 
-  /// Create or update a chat document
-  Future<void> createOrUpdateChat(String chatId, Map<String, dynamic> data) {
-    return _db.collection('chats').doc(chatId).set(data, SetOptions(merge: true));
+  /// Create or update a user profile
+  Future<void> setUserProfile(String uid, Map<String, dynamic> data) {
+    return _db.collection('users').doc(uid).set(data, SetOptions(merge: true));
   }
 
-  /// Example: fetch all chats for the current user
-  Stream<QuerySnapshot<Map<String, dynamic>>> getUserChats(String userId) {
-    return _db
-        .collection('chats')
-        .where('participants', arrayContains: userId)
-        .snapshots();
+  /// Get user profile stream
+  Stream<DocumentSnapshot<Map<String, dynamic>>> getUserProfile(String uid) {
+    return _db.collection('users').doc(uid).snapshots();
   }
 }

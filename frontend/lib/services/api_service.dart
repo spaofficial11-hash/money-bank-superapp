@@ -2,86 +2,53 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String baseUrl = 'https://your-backend-url.com/api'; // TODO: Update with actual backend URL
+  final String baseUrl = "https://your-backend-url.com/api";
 
-  Future<dynamic> get(String endpoint) async {
-    final response = await http.get(Uri.parse('$baseUrl$endpoint'));
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('GET $endpoint failed with status: ${response.statusCode}');
-    }
-  }
-
-  Future<dynamic> post(String endpoint, Map<String, dynamic> data) async {
-    final response = await http.post(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(data),
+  // Login
+  Future<Map<String, dynamic>> login(String email, String password) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/login'),
+      body: {"email": email, "password": password},
     );
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('POST $endpoint failed with status: ${response.statusCode}');
-    }
+    return json.decode(res.body);
   }
 
-  Future<dynamic> put(String endpoint, Map<String, dynamic> data) async {
-    final response = await http.put(
-      Uri.parse('$baseUrl$endpoint'),
-      headers: {'Content-Type': 'application/json'},
-      body: json.encode(data),
+  // Register
+  Future<Map<String, dynamic>> register(String name, String email, String password) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/register'),
+      body: {"name": name, "email": email, "password": password},
     );
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('PUT $endpoint failed with status: ${response.statusCode}');
-    }
+    return json.decode(res.body);
   }
 
-  Future<dynamic> delete(String endpoint) async {
-    final response = await http.delete(Uri.parse('$baseUrl$endpoint'));
-    if (response.statusCode == 200) {
-      return json.decode(response.body);
-    } else {
-      throw Exception('DELETE $endpoint failed with status: ${response.statusCode}');
-    }
+  // Deposit
+  Future<Map<String, dynamic>> deposit(double amount) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/deposit'),
+      body: {"amount": amount.toString()},
+    );
+    return json.decode(res.body);
   }
 
-  // 🔹 New methods for your app
-
-  Future<dynamic> login(String email, String password) {
-    return post('/auth/login', {
-      'email': email,
-      'password': password,
-    });
+  // Withdraw
+  Future<Map<String, dynamic>> withdraw(double amount) async {
+    final res = await http.post(
+      Uri.parse('$baseUrl/withdraw'),
+      body: {"amount": amount.toString()},
+    );
+    return json.decode(res.body);
   }
 
-  Future<dynamic> register(String name, String email, String password) {
-    return post('/auth/register', {
-      'name': name,
-      'email': email,
-      'password': password,
-    });
+  // Get Wallet Balance
+  Future<Map<String, dynamic>> getWalletBalance() async {
+    final res = await http.get(Uri.parse('$baseUrl/wallet/balance'));
+    return json.decode(res.body);
   }
 
-  Future<dynamic> getMlmNetwork() {
-    return get('/mlm/network');
-  }
-
-  Future<dynamic> getWalletBalance() {
-    return get('/wallet/balance');
-  }
-
-  Future<dynamic> deposit(double amount) {
-    return post('/wallet/deposit', {
-      'amount': amount,
-    });
-  }
-
-  Future<dynamic> withdraw(double amount) {
-    return post('/wallet/withdraw', {
-      'amount': amount,
-    });
+  // MLM Network Data
+  Future<Map<String, dynamic>> getMlmNetwork() async {
+    final res = await http.get(Uri.parse('$baseUrl/mlm/network'));
+    return json.decode(res.body);
   }
 }

@@ -51,4 +51,28 @@ class ApiService {
       throw Exception('DELETE $endpoint failed with status: ${response.statusCode}');
     }
   }
+
+  /// ===== Custom App Methods =====
+
+  // Get wallet balance
+  Future<double> getWalletBalance() async {
+    final result = await get('/wallet/balance');
+    return (result['balance'] ?? 0).toDouble();
+  }
+
+  // Deposit money
+  Future<void> deposit(double amount) async {
+    await post('/wallet/deposit', {'amount': amount});
+  }
+
+  // Withdraw money
+  Future<void> withdraw(double amount) async {
+    await post('/wallet/withdraw', {'amount': amount});
+  }
+
+  // Get MLM network data
+  Future<List<dynamic>> getMlmNetwork() async {
+    final result = await get('/mlm/network');
+    return result['network'] ?? [];
+  }
 }

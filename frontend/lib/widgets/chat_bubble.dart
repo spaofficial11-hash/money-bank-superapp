@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class ChatBubble extends StatelessWidget {
   final String text;
@@ -14,14 +15,23 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final messageTime = timestamp != null
+        ? DateFormat('hh:mm a').format(timestamp!)
+        : '';
+
     return Align(
       alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
+        padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: isMe ? Colors.blueAccent : Colors.grey.shade300,
-          borderRadius: BorderRadius.circular(16),
+          color: isMe ? Colors.blue[200] : Colors.grey[300],
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: isMe ? const Radius.circular(12) : Radius.zero,
+            bottomRight: isMe ? Radius.zero : const Radius.circular(12),
+          ),
         ),
         child: Column(
           crossAxisAlignment:
@@ -29,27 +39,22 @@ class ChatBubble extends StatelessWidget {
           children: [
             Text(
               text,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black87,
-              ),
+              style: const TextStyle(fontSize: 16),
             ),
-            if (timestamp != null)
-              Text(
-                _formatTime(timestamp!),
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isMe ? Colors.white70 : Colors.black54,
+            if (messageTime.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  messageTime,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[700],
+                  ),
                 ),
               ),
           ],
         ),
       ),
     );
-  }
-
-  String _formatTime(DateTime time) {
-    final hour = time.hour.toString().padLeft(2, '0');
-    final minute = time.minute.toString().padLeft(2, '0');
-    return "$hour:$minute";
   }
 }

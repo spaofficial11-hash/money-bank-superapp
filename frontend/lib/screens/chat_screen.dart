@@ -1,108 +1,102 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../services/firebase_service.dart';
-import '../widgets/chat_bubble.dart';
+import 'package:money_bank/services/firebase_service.dart';
+import 'package:money_bank/widgets/chat_bubble.dart';
 
 class ChatScreen extends StatefulWidget {
   final String chatId;
+  final String chatTitle;
 
-  ChatScreen({required this.chatId});
+  const ChatScreen({
+    Key? key,
+    required this.chatId,
+    required this.chatTitle,
+  }) : super(key: key);
 
   @override
-  _ChatScreenState createState() => _ChatScreenState();
+  State<ChatScreen> createState() => _ChatScreenState();
 }
 
 class _ChatScreenState extends State<ChatScreen> {
+  final FirebaseService _firebaseService = FirebaseService();
   final TextEditingController _messageController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
-  late FirebaseService _firebaseService;
 
-  @override
-  void initState() {
-    super.initState();
-    _firebaseService = FirebaseService();
-  }
-
-  void _sendMessage() async {
-    final text = _messageController.text.trim();
+  Future<void> _sendMessage() async {
+    String text = _messageController.text.trim();
     if (text.isEmpty) return;
 
-    await _firebaseService.sendMessage(widget.chatId, text);
-    _messageController.clear();
-    _scrollToBottom();
-  }
+    await _firebaseService.sendMessage(
+      widget.chatId,
+      {
+        'text': text,
+        'senderId': _firebaseService.currentUser?.uid,
+        'timestamp': FieldValue.serverTimestamp(),
+      },
+    );
 
-  void _scrollToBottom() {
-    Future.delayed(Duration(milliseconds: 300), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: Duration(milliseconds: 300),
-        curve: Curves.easeOut,
-      );
-    });
+    _messageController.clear();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Live Chat'),
+        title: Text(widget.chatTitle),
       ),
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<QuerySnapshot>(
+            child: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
               stream: _firebaseService.getChatMessages(widget.chatId),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return Center(child: CircularProgressIndicator());
+                  return const Center(child: CircularProgressIndicator());
                 }
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return Center(child: Text('No messages yet'));
+                  return const Center(child: Text('No messages yet.'));
                 }
 
                 final messages = snapshot.data!.docs;
 
                 return ListView.builder(
-                  controller: _scrollController,
+                  reverse: true,
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    final message = messages[index].data() as Map<String, dynamic>;
+                    final message = messages[index].data();
                     return ChatBubble(
-                      text: message['text'] ?? '',
-                      isMe: message['senderId'] == _firebaseService.currentUserId,
-                      timestamp: (message['timestamp'] as Timestamp?)?.toDate(),
+                      message: message['text'] ?? '',
+                      isMe: message['senderId'] ==
+                          _firebaseService.currentUser?.uid,
+                      timestamp: (message['timestamp'] is Timestamp)
+                          ? (message['timestamp'] as Timestamp).toDate()
+                          : null,
                     );
                   },
                 );
               },
             ),
           ),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration: InputDecoration(
-                        hintText: 'Type a message...',
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onSubmitted: (_) => _sendMessage(),
-                    ),
-                  ),
-                  SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.send, color: Theme.of(context).primaryColor),
-                    onPressed: _sendMessage,
-                  ),
-                ],
+          _buildMessageInput(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageInput() {
+    return SafeArea(
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _messageController,
+              decoration: const InputDecoration(
+                hintText: 'Type a message...',
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.send),
+            onPressed: _sendMessage,
           ),
         ],
       ),

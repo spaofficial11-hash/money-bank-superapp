@@ -1,84 +1,53 @@
+// lib/services/firebase_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class FirebaseService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  // Sign up with email + password
-  Future<User?> signUpWithEmail(String email, String password) async {
-    try {
-      UserCredential userCred = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCred.user;
-    } catch (e) {
-      print('Error in signUpWithEmail: $e');
-      return null;
-    }
+  /// Get the currently signed-in user
+  User? get currentUser => _auth.currentUser;
+
+  /// Sign in with email and password
+  Future<UserCredential> signIn(String email, String password) {
+    return _auth.signInWithEmailAndPassword(email: email, password: password);
   }
 
-  // Sign in with email + password
-  Future<User?> signInWithEmail(String email, String password) async {
-    try {
-      UserCredential userCred = await _auth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      return userCred.user;
-    } catch (e) {
-      print('Error in signInWithEmail: $e');
-      return null;
-    }
+  /// Sign out the current user
+  Future<void> signOut() {
+    return _auth.signOut();
   }
 
-  // Sign out
-  Future<void> signOut() async {
-    await _auth.signOut();
-  }
-
-  // Get current user
-  User? getCurrentUser() {
-    return _auth.currentUser;
-  }
-
-  // Add/Update user data in Firestore
-  Future<void> setUserData(String uid, Map<String, dynamic> data) async {
-    await _firestore.collection('users').doc(uid).set(data, SetOptions(merge: true));
-  }
-
-  // Get user data
-  Future<DocumentSnapshot?> getUserData(String uid) async {
-    try {
-      return await _firestore.collection('users').doc(uid).get();
-    } catch (e) {
-      print('Error getting user data: $e');
-      return null;
-    }
-  }
-
-  // Listen to changes in a document
-  Stream<DocumentSnapshot> listenToDoc(String collection, String docId) {
-    return _firestore.collection(collection).doc(docId).snapshots();
-  }
-
-  // Send a chat message
-  Future<void> sendChatMessage(String chatId, Map<String, dynamic> message) async {
-    await _firestore
+  /// Send a chat message
+  Future<void> sendChatMessage(String chatId, Map<String, dynamic> messageData) {
+    return _db
         .collection('chats')
         .doc(chatId)
         .collection('messages')
-        .add(message);
+        .add(messageData);
   }
 
-  // Listen to chat messages
-  Stream<QuerySnapshot> listenToChatMessages(String chatId) {
-    return _firestore
+  /// Stream chat messages for a given chatId
+  Stream<QuerySnapshot<Map<String, dynamic>>> getChatMessages(String chatId) {
+    return _db
         .collection('chats')
         .doc(chatId)
         .collection('messages')
         .orderBy('timestamp', descending: false)
+        .snapshots();
+  }
+
+  /// Create or update a chat document
+  Future<void> createOrUpdateChat(String chatId, Map<String, dynamic> data) {
+    return _db.collection('chats').doc(chatId).set(data, SetOptions(merge: true));
+  }
+
+  /// Example: fetch all chats for the current user
+  Stream<QuerySnapshot<Map<String, dynamic>>> getUserChats(String userId) {
+    return _db
+        .collection('chats')
+        .where('participants', arrayContains: userId)
         .snapshots();
   }
 }

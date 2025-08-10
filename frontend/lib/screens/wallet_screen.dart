@@ -107,7 +107,10 @@ class _WalletScreenState extends State<WalletScreen> {
               children: [
                 WalletCard(balance: _balance),
                 SizedBox(height: 20),
-                DepositButton(onPressed: _deposit),
+                DepositButton(
+                  label: 'Deposit', // FIX: Required label added
+                  onPressed: _deposit,
+                ),
                 SizedBox(height: 10),
                 ElevatedButton(
                   onPressed: _withdraw,

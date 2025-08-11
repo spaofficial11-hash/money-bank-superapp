@@ -2,53 +2,61 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  final String baseUrl = "https://your-backend-url.com/api";
+  final String _baseUrl = "https://your-backend-domain.com/api"; // अपना backend URL डालो
 
-  // Login
-  Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/login'),
-      body: {"email": email, "password": password},
+  /// GET request
+  Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
+    final Uri url = Uri.parse("$_baseUrl$endpoint");
+    final response = await http.get(url, headers: headers);
+
+    return _processResponse(response);
+  }
+
+  /// POST request
+  Future<dynamic> post(String endpoint, Map<String, dynamic> body, {Map<String, String>? headers}) async {
+    final Uri url = Uri.parse("$_baseUrl$endpoint");
+
+    final response = await http.post(
+      url,
+      headers: headers ?? {"Content-Type": "application/json"},
+      body: jsonEncode(body),
     );
-    return json.decode(res.body);
+
+    return _processResponse(response);
   }
 
-  // Register
-  Future<Map<String, dynamic>> register(String name, String email, String password) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/register'),
-      body: {"name": name, "email": email, "password": password},
+  /// PUT request
+  Future<dynamic> put(String endpoint, Map<String, dynamic> body, {Map<String, String>? headers}) async {
+    final Uri url = Uri.parse("$_baseUrl$endpoint");
+
+    final response = await http.put(
+      url,
+      headers: headers ?? {"Content-Type": "application/json"},
+      body: jsonEncode(body),
     );
-    return json.decode(res.body);
+
+    return _processResponse(response);
   }
 
-  // Deposit
-  Future<Map<String, dynamic>> deposit(double amount) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/deposit'),
-      body: {"amount": amount.toString()},
-    );
-    return json.decode(res.body);
+  /// DELETE request
+  Future<dynamic> delete(String endpoint, {Map<String, String>? headers}) async {
+    final Uri url = Uri.parse("$_baseUrl$endpoint");
+    final response = await http.delete(url, headers: headers);
+
+    return _processResponse(response);
   }
 
-  // Withdraw
-  Future<Map<String, dynamic>> withdraw(double amount) async {
-    final res = await http.post(
-      Uri.parse('$baseUrl/withdraw'),
-      body: {"amount": amount.toString()},
-    );
-    return json.decode(res.body);
-  }
+  /// Response handler
+  dynamic _processResponse(http.Response response) {
+    final statusCode = response.statusCode;
+    final body = response.body.isNotEmpty ? jsonDecode(response.body) : null;
 
-  // Get Wallet Balance
-  Future<Map<String, dynamic>> getWalletBalance() async {
-    final res = await http.get(Uri.parse('$baseUrl/wallet/balance'));
-    return json.decode(res.body);
-  }
-
-  // MLM Network Data
-  Future<Map<String, dynamic>> getMlmNetwork() async {
-    final res = await http.get(Uri.parse('$baseUrl/mlm/network'));
-    return json.decode(res.body);
+    if (statusCode >= 200 && statusCode < 300) {
+      return body;
+    } else {
+      throw Exception(
+        "API Error: $statusCode - ${body ?? response.reasonPhrase}",
+      );
+    }
   }
 }

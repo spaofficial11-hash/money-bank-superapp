@@ -1,125 +1,53 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/api_service.dart';
-import '../widgets/wallet_card.dart';
-import '../widgets/deposit_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
-class WalletScreen extends StatefulWidget {
-  const WalletScreen({Key? key}) : super(key: key);
+class AdminPanel extends StatefulWidget {
+  const AdminPanel({Key? key}) : super(key: key);
 
   @override
-  State<WalletScreen> createState() => _WalletScreenState();
+  State<AdminPanel> createState() => _AdminPanelState();
 }
 
-class _WalletScreenState extends State<WalletScreen> {
+class _AdminPanelState extends State<AdminPanel> {
   double _balance = 0.0;
-  bool _loading = false;
 
   @override
   void initState() {
     super.initState();
-    _loadWallet();
+    _loadAdminBalance();
   }
 
-  Future<void> _loadWallet() async {
-    setState(() => _loading = true);
-    try {
-      final bal = await context.read<ApiService>().getWalletBalance();
-      setState(() => _balance = bal);
-    } catch (e) {
-      _showMessage('Error loading wallet: $e');
-    } finally {
-      setState(() => _loading = false);
+  Future<void> _loadAdminBalance() async {
+    final doc = await FirebaseFirestore.instance.collection('admin').doc('wallet').get();
+    if (doc.exists && doc.data() != null) {
+      setState(() {
+        _balance = (doc.data()!['balance'] ?? 0).toDouble();
+      });
     }
-  }
-
-  Future<void> _deposit() async {
-    final amount = await _showAmountDialog('Deposit Amount');
-    if (amount != null) {
-      try {
-        await context.read<ApiService>().deposit(amount);
-        _loadWallet();
-        _showMessage('Deposit successful!');
-      } catch (e) {
-        _showMessage('Deposit failed: $e');
-      }
-    }
-  }
-
-  Future<void> _withdraw() async {
-    final amount = await _showAmountDialog('Withdraw Amount');
-    if (amount != null) {
-      try {
-        await context.read<ApiService>().withdraw(amount);
-        _loadWallet();
-        _showMessage('Withdrawal successful!');
-      } catch (e) {
-        _showMessage('Withdraw failed: $e');
-      }
-    }
-  }
-
-  Future<double?> _showAmountDialog(String title) async {
-    final controller = TextEditingController();
-    return showDialog<double>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(hintText: 'Enter amount'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final val = double.tryParse(controller.text);
-              Navigator.pop(ctx, val);
-            },
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showMessage(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('My Wallet'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadWallet,
-          ),
-        ],
+        title: const Text('Admin Panel'),
+        backgroundColor: Colors.green,
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                WalletCard(balance: _balance),
-                const SizedBox(height: 20),
-                DepositButton(
-                  label: 'Deposit',
-                  onPressed: _deposit,
-                ),
-                const SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: _withdraw,
-                  child: const Text('Withdraw'),
-                ),
-              ],
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Admin Wallet Balance: ₹$_balance',
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: _loadAdminBalance,
+              child: const Text('Refresh Balance'),
             ),
+          ],
+        ),
+      ),
     );
   }
 }

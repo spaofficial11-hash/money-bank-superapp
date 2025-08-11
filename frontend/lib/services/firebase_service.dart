@@ -1,80 +1,76 @@
-import 'package:flutter/material.dart';
+// lib/services/firebase_service.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class FirebaseService extends ChangeNotifier {
+class FirebaseService {
+  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  double _balance = 0.0;
-  double get balance => _balance;
-
-  /// Load wallet balance from Firestore
-  Future<void> loadBalance(String uid) async {
+  /// Sign in anonymously
+  Future<User?> signInAnonymously() async {
     try {
-      final doc = await _firestore.collection('wallets').doc(uid).get();
-      if (doc.exists && doc.data() != null) {
-        // Safely convert any type (int, string, map) into double
-        final bal = doc.data()!['balance'];
-        if (bal is num) {
-          _balance = bal.toDouble();
-        } else if (bal is String) {
-          _balance = double.tryParse(bal) ?? 0.0;
-        } else {
-          _balance = 0.0;
-        }
-        notifyListeners();
-      }
+      UserCredential credential = await _auth.signInAnonymously();
+      return credential.user;
     } catch (e) {
-      debugPrint('Error loading balance: $e');
+      rethrow;
     }
   }
 
-  /// Update wallet balance
-  Future<void> updateBalance(String uid, double amount) async {
+  /// Create or update user profile
+  Future<void> createOrUpdateUserProfile(String uid, Map<String, dynamic> data) async {
     try {
-      await _firestore.collection('wallets').doc(uid).update({
-        'balance': amount,
+      await _firestore.collection('users').doc(uid).set(data, SetOptions(merge: true));
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Get user profile
+  Future<DocumentSnapshot<Map<String, dynamic>>> getUserProfile(String uid) async {
+    try {
+      return await _firestore.collection('users').doc(uid).get();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Add coins to user
+  Future<void> addCoins(String uid, int amount) async {
+    try {
+      await _firestore.collection('users').doc(uid).update({
+        'coins': FieldValue.increment(amount),
       });
-      _balance = amount;
-      notifyListeners();
     } catch (e) {
-      debugPrint('Error updating balance: $e');
+      rethrow;
     }
   }
 
-  /// Add amount to balance
-  Future<void> addBalance(String uid, double amount) async {
+  /// Deduct coins from user
+  Future<void> deductCoins(String uid, int amount) async {
     try {
-      final docRef = _firestore.collection('wallets').doc(uid);
-      await _firestore.runTransaction((transaction) async {
-        final snapshot = await transaction.get(docRef);
-        if (snapshot.exists) {
-          final currentBal = (snapshot['balance'] ?? 0).toDouble();
-          transaction.update(docRef, {
-            'balance': currentBal + amount,
-          });
-          _balance = currentBal + amount;
-        } else {
-          transaction.set(docRef, {
-            'balance': amount,
-          });
-          _balance = amount;
-        }
+      await _firestore.collection('users').doc(uid).update({
+        'coins': FieldValue.increment(-amount),
       });
-      notifyListeners();
     } catch (e) {
-      debugPrint('Error adding balance: $e');
+      rethrow;
     }
   }
 
-  /// Deduct amount from balance
-  Future<bool> deductBalance(String uid, double amount) async {
+  /// Save payment history
+  Future<void> savePayment(String uid, Map<String, dynamic> paymentData) async {
     try {
-      if (_balance < amount) return false;
-      await updateBalance(uid, _balance - amount);
-      return true;
+      await _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('payments')
+          .add(paymentData);
     } catch (e) {
-      debugPrint('Error deducting balance: $e');
-      return false;
+      rethrow;
     }
+  }
+
+  /// Listen to user coin changes
+  Stream<DocumentSnapshot<Map<String, dynamic>>> listenToUser(String uid) {
+    return _firestore.collection('users').doc(uid).snapshots();
   }
 }

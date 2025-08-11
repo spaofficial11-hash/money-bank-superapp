@@ -1,122 +1,72 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/api_service.dart';
-import '../widgets/wallet_card.dart';
-import '../widgets/deposit_button.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class WalletScreen extends StatefulWidget {
+  const WalletScreen({Key? key}) : super(key: key);
+
   @override
-  _WalletScreenState createState() => _WalletScreenState();
+  State<WalletScreen> createState() => _WalletScreenState();
 }
 
 class _WalletScreenState extends State<WalletScreen> {
   double _balance = 0.0;
-  bool _loading = false;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadWallet();
+    _loadWalletBalance();
   }
 
-  Future<void> _loadWallet() async {
-    setState(() => _loading = true);
+  Future<void> _loadWalletBalance() async {
     try {
-      final bal = await context.read<ApiService>().getWalletBalance();
-      setState(() => _balance = bal);
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        final doc = await FirebaseFirestore.instance.collection('wallets').doc(uid).get();
+        if (doc.exists && doc.data() != null) {
+          setState(() {
+            _balance = (doc.data()!['balance'] ?? 0).toDouble();
+            _loading = false;
+          });
+        } else {
+          setState(() {
+            _balance = 0.0;
+            _loading = false;
+          });
+        }
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error loading wallet: $e')),
-      );
-    } finally {
-      setState(() => _loading = false);
+      debugPrint('Error loading wallet balance: $e');
+      setState(() {
+        _loading = false;
+      });
     }
-  }
-
-  Future<void> _deposit() async {
-    final amount = await _showAmountDialog('Deposit Amount');
-    if (amount != null) {
-      try {
-        await context.read<ApiService>().deposit(amount);
-        _loadWallet();
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Deposit failed: $e')),
-        );
-      }
-    }
-  }
-
-  Future<void> _withdraw() async {
-    final amount = await _showAmountDialog('Withdraw Amount');
-    if (amount != null) {
-      try {
-        await context.read<ApiService>().withdraw(amount);
-        _loadWallet();
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Withdraw failed: $e')),
-        );
-      }
-    }
-  }
-
-  Future<double?> _showAmountDialog(String title) async {
-    final controller = TextEditingController();
-    return showDialog<double>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(hintText: 'Enter amount'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () {
-              final val = double.tryParse(controller.text);
-              Navigator.pop(ctx, val);
-            },
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('My Wallet'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _loadWallet,
-          ),
-        ],
+        title: const Text('My Wallet'),
+        backgroundColor: Colors.green,
       ),
       body: _loading
-          ? Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                WalletCard(balance: _balance),
-                SizedBox(height: 20),
-                DepositButton(
-                  label: 'Deposit', // FIX: Required label added
-                  onPressed: _deposit,
-                ),
-                SizedBox(height: 10),
-                ElevatedButton(
-                  onPressed: _withdraw,
-                  child: Text('Withdraw'),
-                ),
-              ],
+          ? const Center(child: CircularProgressIndicator())
+          : Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Current Balance: ₹$_balance',
+                      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  ElevatedButton(
+                    onPressed: _loadWalletBalance,
+                    child: const Text('Refresh Balance'),
+                  ),
+                ],
+              ),
             ),
     );
   }

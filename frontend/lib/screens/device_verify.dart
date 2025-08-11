@@ -1,70 +1,52 @@
+// lib/screens/device_verify.dart
 import 'package:flutter/material.dart';
-import '../services/api_service.dart';
-import 'wallet_screen.dart';
+import 'package:money_bank/services/api_service.dart';
 
 class DeviceVerifyScreen extends StatefulWidget {
+  const DeviceVerifyScreen({super.key});
+
   @override
-  _DeviceVerifyScreenState createState() => _DeviceVerifyScreenState();
+  State<DeviceVerifyScreen> createState() => _DeviceVerifyScreenState();
 }
 
 class _DeviceVerifyScreenState extends State<DeviceVerifyScreen> {
   final ApiService _apiService = ApiService();
-  bool _loading = false;
-  String _statusMessage = '';
+  final TextEditingController _deviceIdController = TextEditingController();
 
-  Future<void> _verifyDevice() async {
-    setState(() {
-      _loading = true;
-      _statusMessage = '';
-    });
-
+  Future<void> verifyDevice() async {
     try {
-      final response = await _apiService.post('/auth/device-verify', {
-        'deviceId': 'sample-device-id', // TODO: Replace with actual device ID
-      });
-
-      if (response['verified'] == true) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => WalletScreen()),
-        );
-      } else {
-        setState(() {
-          _statusMessage = 'Device verification failed.';
-        });
-      }
+      final response = await _apiService.post(
+        '/auth/device-verify',
+        {'deviceId': _deviceIdController.text},
+      );
+      print(response);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Device verified successfully')),
+      );
     } catch (e) {
-      setState(() {
-        _statusMessage = 'Error verifying device: $e';
-      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Verification failed: $e')),
+      );
     }
-
-    setState(() => _loading = false);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Device Verification')),
+      appBar: AppBar(title: const Text("Device Verification")),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text('Please verify your device before proceeding.'),
-            SizedBox(height: 20),
-            if (_statusMessage.isNotEmpty)
-              Text(
-                _statusMessage,
-                style: TextStyle(color: Colors.red),
-              ),
-            SizedBox(height: 20),
-            _loading
-                ? CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: _verifyDevice,
-                    child: Text('Verify Device'),
-                  ),
+            TextField(
+              controller: _deviceIdController,
+              decoration: const InputDecoration(labelText: "Enter Device ID"),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: verifyDevice,
+              child: const Text("Verify"),
+            ),
           ],
         ),
       ),

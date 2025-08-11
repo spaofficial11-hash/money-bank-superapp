@@ -1,8 +1,9 @@
+// lib/screens/device_verify.dart
 import 'package:flutter/material.dart';
 import 'package:money_bank/services/api_service.dart';
 
 class DeviceVerifyScreen extends StatefulWidget {
-  const DeviceVerifyScreen({super.key});
+  const DeviceVerifyScreen({Key? key}) : super(key: key);
 
   @override
   State<DeviceVerifyScreen> createState() => _DeviceVerifyScreenState();
@@ -10,39 +11,35 @@ class DeviceVerifyScreen extends StatefulWidget {
 
 class _DeviceVerifyScreenState extends State<DeviceVerifyScreen> {
   final ApiService _apiService = ApiService();
-  bool _isLoading = false;
-  String _statusMessage = "";
+  bool _isVerifying = false;
+  String? _message;
 
   Future<void> _verifyDevice() async {
     setState(() {
-      _isLoading = true;
-      _statusMessage = "";
+      _isVerifying = true;
+      _message = null;
     });
 
     try {
-      // Example device data (तुम अपने अनुसार बदल सकते हो)
-      Map<String, dynamic> deviceData = {
-        "device_id": "1234567890",
-        "platform": "android",
-        "version": "1.0.0",
-      };
-
-      final response = await _apiService.post(
-        "/auth/device-verify",
-        deviceData,
+      // FIX: Using sendRequest instead of undefined post()
+      final response = await _apiService.sendRequest(
+        '/auth/device-verify',
+        method: 'POST',
+        body: {
+          'device_id': '12345', // Replace with actual device ID
+        },
       );
 
       setState(() {
-        _statusMessage = "✅ Device Verified: ${response['message'] ?? 'Success'}";
+        _message = response['message'] ?? 'Device verification complete';
       });
-
     } catch (e) {
       setState(() {
-        _statusMessage = "❌ Verification Failed: $e";
+        _message = 'Error: $e';
       });
     } finally {
       setState(() {
-        _isLoading = false;
+        _isVerifying = false;
       });
     }
   }
@@ -50,29 +47,26 @@ class _DeviceVerifyScreenState extends State<DeviceVerifyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Device Verification"),
-      ),
+      appBar: AppBar(title: const Text('Device Verification')),
       body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              if (_isLoading) const CircularProgressIndicator(),
-              if (!_isLoading) ElevatedButton(
-                onPressed: _verifyDevice,
-                child: const Text("Verify Device"),
+        child: _isVerifying
+            ? const CircularProgressIndicator()
+            : Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton(
+                    onPressed: _verifyDevice,
+                    child: const Text('Verify Device'),
+                  ),
+                  if (_message != null) ...[
+                    const SizedBox(height: 20),
+                    Text(
+                      _message!,
+                      textAlign: TextAlign.center,
+                    ),
+                  ]
+                ],
               ),
-              const SizedBox(height: 20),
-              Text(
-                _statusMessage,
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 16),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

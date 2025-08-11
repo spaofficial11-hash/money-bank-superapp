@@ -1,42 +1,80 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 class FirebaseService extends ChangeNotifier {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  User? get currentUser => _auth.currentUser;
 
   double _balance = 0.0;
   double get balance => _balance;
 
-  FirebaseService() {
-    _loadUserBalance();
-  }
-
-  Future<void> _loadUserBalance() async {
-    if (currentUser != null) {
-      final doc = await _firestore.collection('users').doc(currentUser!.uid).get();
+  /// Load wallet balance from Firestore
+  Future<void> loadBalance(String uid) async {
+    try {
+      final doc = await _firestore.collection('wallets').doc(uid).get();
       if (doc.exists && doc.data() != null) {
-        _balance = (doc.data()!['balance'] ?? 0).toDouble();
+        // Safely convert any type (int, string, map) into double
+        final bal = doc.data()!['balance'];
+        if (bal is num) {
+          _balance = bal.toDouble();
+        } else if (bal is String) {
+          _balance = double.tryParse(bal) ?? 0.0;
+        } else {
+          _balance = 0.0;
+        }
         notifyListeners();
       }
+    } catch (e) {
+      debugPrint('Error loading balance: $e');
     }
   }
 
-  Future<void> updateBalance(double newBalance) async {
-    if (currentUser != null) {
-      await _firestore.collection('users').doc(currentUser!.uid).update({
-        'balance': newBalance,
+  /// Update wallet balance
+  Future<void> updateBalance(String uid, double amount) async {
+    try {
+      await _firestore.collection('wallets').doc(uid).update({
+        'balance': amount,
       });
-      _balance = newBalance;
+      _balance = amount;
       notifyListeners();
+    } catch (e) {
+      debugPrint('Error updating balance: $e');
     }
   }
 
-  Future<void> signInAnonymously() async {
-    await _auth.signInAnonymously();
-    await _loadUserBalance();
+  /// Add amount to balance
+  Future<void> addBalance(String uid, double amount) async {
+    try {
+      final docRef = _firestore.collection('wallets').doc(uid);
+      await _firestore.runTransaction((transaction) async {
+        final snapshot = await transaction.get(docRef);
+        if (snapshot.exists) {
+          final currentBal = (snapshot['balance'] ?? 0).toDouble();
+          transaction.update(docRef, {
+            'balance': currentBal + amount,
+          });
+          _balance = currentBal + amount;
+        } else {
+          transaction.set(docRef, {
+            'balance': amount,
+          });
+          _balance = amount;
+        }
+      });
+      notifyListeners();
+    } catch (e) {
+      debugPrint('Error adding balance: $e');
+    }
+  }
+
+  /// Deduct amount from balance
+  Future<bool> deductBalance(String uid, double amount) async {
+    try {
+      if (_balance < amount) return false;
+      await updateBalance(uid, _balance - amount);
+      return true;
+    } catch (e) {
+      debugPrint('Error deducting balance: $e');
+      return false;
+    }
   }
 }

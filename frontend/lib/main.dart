@@ -1,39 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:provider/provider.dart';
-import 'services/firebase_service.dart';
-import 'screens/wallet_screen.dart';
-import 'screens/admin_panel.dart';
-import 'screens/device_verify.dart';
+import 'package:money_bank/screens/device_verify.dart';
+import 'package:money_bank/screens/home_screen.dart';
+import 'package:money_bank/screens/login_screen.dart';
+import 'package:money_bank/screens/splash_screen.dart';
+import 'package:money_bank/services/api_service.dart';
+import 'firebase_options.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  runApp(const MoneyBankApp());
+  
+  // Firebase initialization
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  runApp(MyApp());
 }
 
-class MoneyBankApp extends StatelessWidget {
-  const MoneyBankApp({Key? key}) : super(key: key);
+class MyApp extends StatelessWidget {
+  final ApiService _apiService = ApiService();
 
   @override
   Widget build(BuildContext context) {
-    return MultiProvider(
-      providers: [
-        ChangeNotifierProvider<FirebaseService>(
-          create: (_) => FirebaseService(),
-        ),
-      ],
-      child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        title: 'Money Bank',
-        theme: ThemeData(primarySwatch: Colors.green),
-        initialRoute: '/',
-        routes: {
-          '/': (_) => const WalletScreen(),
-          '/admin': (_) => const AdminPanel(),
-          '/device-verify': (_) => const DeviceVerifyScreen(),
-        },
+    return MaterialApp(
+      title: 'Money Bank',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primarySwatch: Colors.green,
+        scaffoldBackgroundColor: Colors.white,
       ),
+      initialRoute: '/',
+      routes: {
+        '/': (_) => SplashScreen(),
+        '/login': (_) => LoginScreen(),
+        '/home': (_) => HomeScreen(),
+        '/device-verify': (_) => DeviceVerifyScreen(), // FIXED: const हटाया
+      },
     );
   }
 }

@@ -1,62 +1,73 @@
+// lib/services/api_service.dart
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+import 'package:http/http.dart' as http';
 
 class ApiService {
-  final String _baseUrl = "https://your-backend-domain.com/api"; // अपना backend URL डालो
+  // TODO: replace with your backend base URL, no trailing slash
+  final String _baseUrl = "https://your-backend-domain.com/api";
 
-  /// GET request
+  ApiService();
+
+  /// Generic GET
   Future<dynamic> get(String endpoint, {Map<String, String>? headers}) async {
-    final Uri url = Uri.parse("$_baseUrl$endpoint");
-    final response = await http.get(url, headers: headers);
+    final uri = Uri.parse("$_baseUrl$endpoint");
+    final response = await http.get(uri, headers: headers ?? {
+      'Content-Type': 'application/json',
+    });
 
     return _processResponse(response);
   }
 
-  /// POST request
-  Future<dynamic> post(String endpoint, Map<String, dynamic> body, {Map<String, String>? headers}) async {
-    final Uri url = Uri.parse("$_baseUrl$endpoint");
-
+  /// Generic POST
+  Future<dynamic> post(String endpoint, Map<String, dynamic> body,
+      {Map<String, String>? headers}) async {
+    final uri = Uri.parse("$_baseUrl$endpoint");
     final response = await http.post(
-      url,
-      headers: headers ?? {"Content-Type": "application/json"},
+      uri,
+      headers: headers ?? {
+        'Content-Type': 'application/json',
+      },
       body: jsonEncode(body),
     );
 
     return _processResponse(response);
   }
 
-  /// PUT request
-  Future<dynamic> put(String endpoint, Map<String, dynamic> body, {Map<String, String>? headers}) async {
-    final Uri url = Uri.parse("$_baseUrl$endpoint");
-
+  /// Generic PUT
+  Future<dynamic> put(String endpoint, Map<String, dynamic> body,
+      {Map<String, String>? headers}) async {
+    final uri = Uri.parse("$_baseUrl$endpoint");
     final response = await http.put(
-      url,
-      headers: headers ?? {"Content-Type": "application/json"},
+      uri,
+      headers: headers ?? {
+        'Content-Type': 'application/json',
+      },
       body: jsonEncode(body),
     );
 
     return _processResponse(response);
   }
 
-  /// DELETE request
+  /// Generic DELETE
   Future<dynamic> delete(String endpoint, {Map<String, String>? headers}) async {
-    final Uri url = Uri.parse("$_baseUrl$endpoint");
-    final response = await http.delete(url, headers: headers);
+    final uri = Uri.parse("$_baseUrl$endpoint");
+    final response = await http.delete(uri, headers: headers ?? {
+      'Content-Type': 'application/json',
+    });
 
     return _processResponse(response);
   }
 
-  /// Response handler
+  /// Centralized response handler
   dynamic _processResponse(http.Response response) {
-    final statusCode = response.statusCode;
+    final status = response.statusCode;
     final body = response.body.isNotEmpty ? jsonDecode(response.body) : null;
 
-    if (statusCode >= 200 && statusCode < 300) {
+    if (status >= 200 && status < 300) {
       return body;
-    } else {
-      throw Exception(
-        "API Error: $statusCode - ${body ?? response.reasonPhrase}",
-      );
     }
+
+    // Throw a helpful error
+    throw Exception('API Error: $status - ${body ?? response.reasonPhrase}');
   }
 }

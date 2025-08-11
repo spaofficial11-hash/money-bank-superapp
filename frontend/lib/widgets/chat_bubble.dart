@@ -1,54 +1,28 @@
+// lib/widgets/chat_bubble.dart
 import 'package:flutter/material.dart';
 
 class ChatBubble extends StatelessWidget {
   final String text;
-  final DateTime? timestamp;
   final bool isMe;
-
-  const ChatBubble({
-    Key? key,
-    required this.text,
-    required this.isMe,
-    this.timestamp,
-  }) : super(key: key);
+  const ChatBubble({super.key, required this.text, this.isMe = false});
 
   @override
   Widget build(BuildContext context) {
-    final time = timestamp != null
-        ? "${timestamp!.hour}:${timestamp!.minute.toString().padLeft(2, '0')}"
-        : "";
-
-    return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: isMe ? Colors.blueAccent : Colors.grey[300],
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          crossAxisAlignment:
-              isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-          children: [
-            Text(
-              text,
-              style: TextStyle(
-                color: isMe ? Colors.white : Colors.black,
-                fontSize: 16,
-              ),
-            ),
-            if (time.isNotEmpty)
-              Text(
-                time,
-                style: TextStyle(
-                  color: isMe ? Colors.white70 : Colors.black54,
-                  fontSize: 10,
-                ),
-              ),
-          ],
-        ),
-      ),
+    final bg = isMe ? Colors.green[100] : Colors.grey[200];
+    final align = isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start;
+    final radius = isMe
+        ? const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12), bottomLeft: Radius.circular(12))
+        : const BorderRadius.only(topLeft: Radius.circular(12), topRight: Radius.circular(12), bottomRight: Radius.circular(12));
+    return Column(
+      crossAxisAlignment: align,
+      children: [
+        Container(
+          margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(color: bg, borderRadius: radius),
+          child: Text(text),
+        )
+      ],
     );
   }
 }

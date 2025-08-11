@@ -10,60 +10,68 @@ class DeviceVerifyScreen extends StatefulWidget {
 
 class _DeviceVerifyScreenState extends State<DeviceVerifyScreen> {
   final ApiService _apiService = ApiService();
-  final TextEditingController _deviceIdController = TextEditingController();
   bool _isLoading = false;
+  String _statusMessage = "";
 
-  Future<void> verifyDevice() async {
-    if (_deviceIdController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a device ID")),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
+  Future<void> _verifyDevice() async {
+    setState(() {
+      _isLoading = true;
+      _statusMessage = "";
+    });
 
     try {
+      // Example device data (तुम अपने अनुसार बदल सकते हो)
+      Map<String, dynamic> deviceData = {
+        "device_id": "1234567890",
+        "platform": "android",
+        "version": "1.0.0",
+      };
+
       final response = await _apiService.post(
-        '/auth/device-verify',
-        {'deviceId': _deviceIdController.text.trim()},
+        "/auth/device-verify",
+        deviceData,
       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Device verified: ${response['message']}')),
-      );
+      setState(() {
+        _statusMessage = "✅ Device Verified: ${response['message'] ?? 'Success'}";
+      });
+
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Verification failed: $e')),
-      );
+      setState(() {
+        _statusMessage = "❌ Verification Failed: $e";
+      });
     } finally {
-      setState(() => _isLoading = false);
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Device Verification")),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: _deviceIdController,
-              decoration: const InputDecoration(
-                labelText: "Enter Device ID",
-                border: OutlineInputBorder(),
+      appBar: AppBar(
+        title: const Text("Device Verification"),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (_isLoading) const CircularProgressIndicator(),
+              if (!_isLoading) ElevatedButton(
+                onPressed: _verifyDevice,
+                child: const Text("Verify Device"),
               ),
-            ),
-            const SizedBox(height: 20),
-            _isLoading
-                ? const CircularProgressIndicator()
-                : ElevatedButton(
-                    onPressed: verifyDevice,
-                    child: const Text("Verify"),
-                  ),
-          ],
+              const SizedBox(height: 20),
+              Text(
+                _statusMessage,
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontSize: 16),
+              ),
+            ],
+          ),
         ),
       ),
     );

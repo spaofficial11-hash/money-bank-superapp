@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:money_bank/services/api_service.dart';
 
 class DeviceVerifyScreen extends StatefulWidget {
-  const DeviceVerifyScreen({Key? key}) : super(key: key);
+  const DeviceVerifyScreen({super.key});
 
   @override
   State<DeviceVerifyScreen> createState() => _DeviceVerifyScreenState();
@@ -11,36 +11,20 @@ class DeviceVerifyScreen extends StatefulWidget {
 
 class _DeviceVerifyScreenState extends State<DeviceVerifyScreen> {
   final ApiService _apiService = ApiService();
-  bool _isVerifying = false;
-  String? _message;
+  bool _isLoading = false;
+  String _status = '';
 
-  Future<void> _verifyDevice() async {
-    setState(() {
-      _isVerifying = true;
-      _message = null;
-    });
-
+  Future<void> _verify() async {
+    setState(() { _isLoading = true; _status = ''; });
     try {
-      // FIX: Using sendRequest instead of undefined post()
-      final response = await _apiService.sendRequest(
-        '/auth/device-verify',
-        method: 'POST',
-        body: {
-          'device_id': '12345', // Replace with actual device ID
-        },
-      );
-
-      setState(() {
-        _message = response['message'] ?? 'Device verification complete';
+      final resp = await _apiService.sendRequest('/auth/device-verify', method: 'POST', body: {
+        'device_id': 'sample-device-id', // replace with real device ID
       });
+      setState(() { _status = resp['message'] ?? 'Verified'; });
     } catch (e) {
-      setState(() {
-        _message = 'Error: $e';
-      });
+      setState(() { _status = 'Error: $e'; });
     } finally {
-      setState(() {
-        _isVerifying = false;
-      });
+      setState(() { _isLoading = false; });
     }
   }
 
@@ -49,24 +33,15 @@ class _DeviceVerifyScreenState extends State<DeviceVerifyScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Device Verification')),
       body: Center(
-        child: _isVerifying
-            ? const CircularProgressIndicator()
-            : Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  ElevatedButton(
-                    onPressed: _verifyDevice,
-                    child: const Text('Verify Device'),
-                  ),
-                  if (_message != null) ...[
-                    const SizedBox(height: 20),
-                    Text(
-                      _message!,
-                      textAlign: TextAlign.center,
-                    ),
-                  ]
-                ],
-              ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            if (_isLoading) const CircularProgressIndicator(),
+            if (!_isLoading) ElevatedButton(onPressed: _verify, child: const Text('Verify Device')),
+            const SizedBox(height: 12),
+            Text(_status, textAlign: TextAlign.center),
+          ]),
+        ),
       ),
     );
   }
